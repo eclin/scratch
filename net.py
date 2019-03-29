@@ -30,9 +30,53 @@ class NeuralNetwork:
       return
     
     for i in range(self.epochs):
+      random.shuffle(training_data)
+      batches = np.split(training_data, batch_size)
 
+      for batch in batches:
+        change_b = [np.zeros(b.shape) for b in self.biases]
+        change_w = [np.zeros(w.shape) for w in self.weights]
+        # Run gradient descent for each batch in batches
+
+        for x, y in batch:
+          delta_b, delta_w = backprop(x, y)
+          change_b = [cb + db for cb, db in zip(change_b, delta_b)]
+          change_w = [cw + dw for cw, dw in zip(change_w, delta_w)]
+
+        self.weights = [w - (self.learning_rate / len(batch)) * nw 
+                        for w, nw in zip(self.weights, change_w)]
+        self.biases = [b - (self.learning_rate / len(batch)) * nb 
+                       for b, nb in zip(self.biases, change_b)]
 
   def backprop(self, x, y):
+    # initialize empty arrays to represent the change in the weights and biases
+    delta_b = [np.zeros(b.shape) for b in self.biases]
+    delta_w = [np.zeros(w.shape) for w in self.weights]
+
+    # Feedforward
+    a = x
+    activations = [x]
+    products = []
+    for i in range(self.num_layers - 1):
+      # z^l = w^l a^l-1 + b^l
+      z = np.dot(self.weights[i], a) + self.biases
+      products.append(z)
+      a = act.sigmoid(z)
+      activations.append(a)
+
+    # Output Error
+    delta = (activations[-1] - y) * act.sigmoid_derivative(products[-1])
+    delta_b[-1] = delta
+    delta_w[-1] = np.dot(delta, activations[-2].transpose())
+
+    # Backprop Error
+    errors = []
+    for l in range(self.num_layers - 2, 0):
+      delta = np.dot(self.weights[l + 1].transpose(), delta) * act.sigmoid_derivative(products[l])
+      delta_b[l] = delta
+      delta_w[l] = np.dot(delta, activations[l - 1])
+
+    return (delta_b, delta_w)
 
 
 
